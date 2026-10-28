@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyOCR</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--card:rgba(255,255,255,.55);--text:#12306b;--muted:#4a6aa5;--accent:#2f80ed;--border:rgba(255,255,255,.7);--cloud:#fff;}
+body.night{--card:rgba(20,24,52,.6);--text:#e8ecff;--muted:#9aa5d6;--accent:#8b7bff;--border:rgba(139,123,255,.3);--cloud:#2a3158;}
+*{box-sizing:border-box;margin:0}
+body{font-family:Poppins,system-ui,sans-serif;color:var(--text);min-height:100vh;overflow-x:hidden;transition:color .6s}
+
+/* ---------- SKY ---------- */
+.sky{position:fixed;inset:0;z-index:-1;overflow:hidden}
+.sky .layer{position:absolute;inset:0;transition:opacity 1.2s}
+.day-layer{background:linear-gradient(#1e90ff,#6ec6ff 60%,#d6f0ff)}
+.night-layer{background:linear-gradient(#02030a,#0a1030 70%,#1a1f4a);opacity:0}
+body.night .night-layer{opacity:1}
+body.night .day-layer{opacity:0}
+.sun{position:absolute;top:8%;right:10%;width:110px;height:110px;border-radius:50%;
+  background:radial-gradient(#fff7b0,#ffd93b);box-shadow:0 0 80px 30px rgba(255,220,80,.6);animation:pulse 5s ease-in-out infinite}
+.moon{position:absolute;top:9%;right:11%;width:100px;height:100px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#fffef0,#d9d9c4);box-shadow:0 0 60px 15px rgba(220,225,255,.35);animation:pulse 6s ease-in-out infinite}
+.moon::before,.moon::after{content:"";position:absolute;border-radius:50%;background:rgba(150,150,130,.35)}
+.moon::before{width:22px;height:22px;top:25px;left:55px}
+.moon::after{width:14px;height:14px;top:62px;left:25px}
+@keyframes pulse{50%{transform:scale(1.06)}}
+.star{position:absolute;background:#fff;border-radius:50%;animation:twinkle 3s infinite}
+@keyframes twinkle{0%,100%{opacity:.2}50%{opacity:1}}
+.cloud{position:absolute;left:-300px;width:200px;height:60px;background:var(--cloud);border-radius:60px;opacity:.9;
+  transition:background 1.2s;animation:drift linear infinite}
+.cloud::before,.cloud::after{content:"";position:absolute;background:inherit;border-radius:50%}
+.cloud::before{width:90px;height:90px;top:-45px;left:25px}
+.cloud::after{width:70px;height:70px;top:-30px;right:25px}
+@keyframes drift{to{transform:translateX(calc(100vw + 600px))}}
+.shoot{position:absolute;width:120px;height:2px;background:linear-gradient(90deg,#fff,transparent);opacity:0;top:15%;left:60%;transform:rotate(-30deg)}
+body.night .shoot{animation:shoot 7s infinite 2s}
+@keyframes shoot{0%{opacity:0;transform:translate(0,0) rotate(-30deg)}5%{opacity:1}20%,100%{opacity:0;transform:translate(-500px,280px) rotate(-30deg)}}
+.sun,.moon,.stars{transition:opacity 1s,transform 1.2s}
+.moon,.stars{opacity:0;transform:translateY(60px)}
+body.night .moon,body.night .stars{opacity:1;transform:none}
+body.night .sun{opacity:0;transform:translateY(-80px)}
+
+/* ---------- UI ---------- */
+.wrap{max-width:860px;margin:0 auto;padding:40px 20px 60px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+h1{font-size:2rem;letter-spacing:.5px}
+h1 span{color:var(--accent)}
+.toggle{border:1px solid var(--border);background:var(--card);backdrop-filter:blur(12px);color:var(--text);
+  padding:10px 18px;border-radius:30px;cursor:pointer;font:600 .9rem Poppins;transition:transform .2s}
+.toggle:hover{transform:scale(1.06)}
+.card{background:var(--card);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:22px;
+  padding:24px;margin-bottom:22px;box-shadow:0 10px 40px rgba(0,0,0,.15);animation:rise .7s both}
+@keyframes rise{from{opacity:0;transform:translateY(25px)}}
+.drop{border:2px dashed var(--accent);border-radius:16px;padding:34px;text-align:center;cursor:pointer;transition:.25s}
+.drop:hover,.drop.over{background:rgba(47,128,237,.12);transform:scale(1.01)}
+.drop .icon{font-size:2.6rem;animation:float 3s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-8px)}}
+.drop p{color:var(--muted);margin-top:6px;font-size:.9rem}
+#preview{max-width:100%;max-height:260px;border-radius:12px;margin-top:14px;display:none}
+.row{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;align-items:center}
+label{font-size:.85rem;color:var(--muted)}
+select,textarea{width:100%;background:rgba(255,255,255,.25);color:var(--text);border:1px solid var(--border);
+  border-radius:12px;padding:10px;font:inherit;font-size:.9rem}
+body.night select,body.night textarea{background:rgba(255,255,255,.06)}
+textarea{resize:vertical;min-height:90px}
+#out{min-height:170px;font-family:Consolas,monospace}
+button.go{width:100%;margin-top:16px;padding:14px;border:0;border-radius:14px;cursor:pointer;color:#fff;
+  font:700 1rem Poppins;background:linear-gradient(90deg,var(--accent),#00c6ff);transition:.25s}
+button.go:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(47,128,237,.45)}
+button.go:disabled{opacity:.6;cursor:wait}
+.copy{margin-top:10px;padding:8px 16px;border-radius:10px;border:1px solid var(--accent);background:transparent;color:var(--text);cursor:pointer;font:600 .85rem Poppins}
+.gauges{display:flex;gap:18px;justify-content:space-around;flex-wrap:wrap;margin-top:8px}
+.g{text-align:center;width:130px}
+.g svg{width:120px;height:120px;transform:rotate(-90deg)}
+.g circle{fill:none;stroke-width:10;stroke-linecap:round}
+.g .bg{stroke:rgba(128,150,200,.25)}
+.g .fg{stroke:var(--accent);stroke-dasharray:314;stroke-dashoffset:314;transition:stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1)}
+.g .val{margin-top:-78px;font:700 1.4rem Poppins;height:78px}
+.g small{color:var(--muted)}
+.stats{display:flex;gap:24px;justify-content:center;margin-top:14px;color:var(--muted);font-size:.9rem;flex-wrap:wrap}
+.hint{color:var(--muted);font-size:.8rem;margin-top:12px;text-align:center}
+.status{margin-top:12px;padding:12px 14px;border-radius:12px;background:rgba(47,128,237,.12);color:var(--text)}
+.status.error{background:rgba(239,83,80,.14);color:#a52424}
+.status:empty{display:none}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes s{to{transform:rotate(360deg)}}
+@media(max-width:600px){.wrap{padding:24px 14px 40px}header{align-items:flex-start}h1{font-size:1.6rem}.card{padding:17px}.drop{padding:25px 12px}.g{width:105px}.g svg{width:100px;height:100px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<div class="sky">
+  <div class="layer day-layer"></div>
+  <div class="layer night-layer"></div>
+  <div class="stars" id="stars"></div>
+  <div class="sun"></div>
+  <div class="moon"></div>
+  <div class="shoot"></div>
+  <div id="clouds"></div>
+</div>
+
+<div class="wrap">
+  <header>
+    <h1>Sky<span>OCR</span></h1>
+    <button class="toggle" id="themeBtn">🌙 Night mode</button>
+  </header>
+
+  <div class="card">
+    <div class="drop" id="drop">
+      <div class="icon">☁️</div>
+      <strong>Drop an image here or click to upload</strong>
+      <p>PNG, JPG, BMP, TIFF, WEBP</p>
+      <input type="file" id="file" accept="image/*" hidden>
+    </div>
+    <p class="hint" id="fileInfo" aria-live="polite"></p>
+    <img id="preview" alt="preview">
+    <div class="row">
+      <div style="flex:1;min-width:200px">
+        <label>Page segmentation mode (psm)</label>
+        <select id="psm" aria-label="Page segmentation mode">
+          <option value="6" selected>6 – Single block of text</option>
+          <option value="3">3 – Fully automatic</option>
+          <option value="4">4 – Single column</option>
+          <option value="7">7 – Single line</option>
+          <option value="11">11 – Sparse text</option>
+        </select>
+      </div>
+      <label><input type="checkbox" id="pre" checked> Enhance contrast (CLAHE)</label>
+    </div>
+    <div style="margin-top:14px">
+      <label>Ground truth text (optional – needed to calculate accuracy)</label>
+      <textarea id="gt" placeholder="Paste the correct text here to measure character & word accuracy..."></textarea>
+    </div>
+    <button class="go" id="go">✨ Extract Text</button>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+  </div>
+
+  <div class="card" id="result" style="display:none">
+    <label>Extracted text</label>
+    <textarea id="out" placeholder="Your text will appear here"></textarea>
+    <button class="copy" id="copy">📋 Copy text</button>
+
+    <div class="gauges" style="margin-top:22px">
+      <div class="g" data-k="confidence"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="50"/><circle class="fg" cx="60" cy="60" r="50"/></svg><div class="val">–</div><small>Tesseract confidence</small></div>
+      <div class="g" data-k="char_accuracy"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="50"/><circle class="fg" cx="60" cy="60" r="50"/></svg><div class="val">–</div><small>Character accuracy</small></div>
+      <div class="g" data-k="word_accuracy"><svg viewBox="0 0 120 120"><circle class="bg" cx="60" cy="60" r="50"/><circle class="fg" cx="60" cy="60" r="50"/></svg><div class="val">–</div><small>Word accuracy</small></div>
+    </div>
+    <div class="stats"><span id="wc"></span><span id="cd"></span></div>
+    <p class="hint" id="hint"></p>
+  </div>
+
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+/* ---- clouds & stars ---- */
+for (let i = 0; i < 9; i++) {
+  const c = document.createElement('div');
+  c.className = 'cloud';
+  const s = 0.6 + Math.random() * 1.1;
+  c.style.top = (Math.random() * 60 + 3) + '%';
+  c.style.transform = `scale(${s})`;
+  c.style.animationDuration = (50 + Math.random() * 60) + 's';
+  c.style.animationDelay = (-Math.random() * 100) + 's';
+  c.style.opacity = 0.5 + s / 3;
+  $('clouds').appendChild(c);
+}
+for (let i = 0; i < 140; i++) {
+  const st = document.createElement('div');
+  st.className = 'star';
+  const z = Math.random() * 2.5 + 0.5;
+  st.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*85}%;width:${z}px;height:${z}px;animation-delay:${Math.random()*3}s`;
+  $('stars').appendChild(st);
+}
+
+/* ---- theme ---- */
+function setTheme(night) {
+  document.body.classList.toggle('night', night);
+  $('themeBtn').textContent = night ? '☀️ Day mode' : '🌙 Night mode';
+  try { localStorage.setItem('night', night ? '1' : '0'); } catch (e) {}
+}
+$('themeBtn').onclick = () => setTheme(!document.body.classList.contains('night'));
+try { if (localStorage.getItem('night') === '1') setTheme(true); } catch (e) {}
+
+/* ---- upload ---- */
+let selected = null;
+let previewUrl = null;
+const drop = $('drop');
+drop.onclick = () => $('file').click();
+$('file').onclick = e => e.stopPropagation();
+$('file').onchange = e => pick(e.target.files[0]);
+['dragover', 'dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => pick(e.dataTransfer.files[0]));
+function pick(f) {
+  if (!f) return;
+  if (!f.type.startsWith('image/')) {
+    showStatus('Please choose a supported image file.', true);
+    return;
+  }
+  if (f.size > 16 * 1024 * 1024) {
+    showStatus('Image is too large. Choose an image smaller than 16 MB.', true);
+    return;
+  }
+  selected = f;
+  if (previewUrl) URL.revokeObjectURL(previewUrl);
+  previewUrl = URL.createObjectURL(f);
+  $('preview').src = previewUrl;
+  $('preview').style.display = 'block';
+  $('fileInfo').textContent = `${f.name} · ${(f.size / 1024 / 1024).toFixed(2)} MB`;
+  showStatus('');
+}
+
+function showStatus(message, isError = false) {
+  const status = $('status');
+  status.textContent = message;
+  status.classList.toggle('error', isError);
+}
+
+/* ---- gauges ---- */
+function setGauge(k, v) {
+  const g = document.querySelector(`.g[data-k="${k}"]`);
+  const fg = g.querySelector('.fg');
+  if (v === null) { g.querySelector('.val').textContent = 'N/A'; fg.style.strokeDashoffset = 314; return; }
+  fg.style.strokeDashoffset = 314 - 314 * Math.min(v, 100) / 100;
+  fg.style.stroke = v >= 85 ? '#2ecc71' : v >= 60 ? '#f5a623' : '#ef5350';
+  g.querySelector('.val').textContent = `${Number(v).toFixed(1)}%`;
+}
+
+/* ---- run OCR ---- */
+$('go').onclick = async () => {
+  if (!selected) { showStatus('Please upload an image first.', true); return; }
+  const btn = $('go');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Reading image...';
+  showStatus('Processing image. Large images can take a little longer.');
+  const fd = new FormData();
+  fd.append('image', selected);
+  fd.append('psm', $('psm').value);
+  fd.append('preprocess', $('pre').checked);
+  fd.append('ground_truth', $('gt').value);
+  try {
+    const r = await fetch('/ocr', { method: 'POST', body: fd });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error((d && d.error) || `Request failed (${r.status}).`);
+    $('result').style.display = 'block';
+    $('out').value = d.text;
+    setGauge('confidence', d.confidence);
+    setGauge('char_accuracy', d.char_accuracy);
+    setGauge('word_accuracy', d.word_accuracy);
+    $('wc').textContent = `Words detected: ${d.word_count}`;
+    $('cd').textContent = d.has_ground_truth ? `Edit distance: ${d.char_distance}` : '';
+    $('hint').textContent = d.text ? (d.has_ground_truth ? '' : 'Add ground truth text above to see character & word accuracy.') : 'No text detected. Use a sharper, well-lit image with the text upright, or try another page mode.';
+    showStatus(d.text ? 'Text extraction complete.' : 'The image was processed, but no text was detected.', !d.text);
+    $('result').scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    showStatus(e.message || 'Could not extract text. Please try again.', true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ Extract Text';
+  }
+};
+
+$('copy').onclick = async () => {
+  try { await navigator.clipboard.writeText($('out').value); }
+  catch (e) { $('out').select(); document.execCommand('copy'); }
+  $('copy').textContent = '✅ Copied!';
+  setTimeout(() => $('copy').textContent = '📋 Copy text', 1500);
+};
+</script>
+</body>
+</html>
